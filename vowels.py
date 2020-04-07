@@ -46,24 +46,20 @@ def load_data():
     df.columns = header
     df = df.set_index("vowel")
 
-    # Standardization 
-    for feature in header[:-3]:
-        print(feature)
-        mean = df[feature].mean()
-        std = df[feature].std()
-        df[feature] = (df[feature] - mean)/(std)
+    # Standardization. Doesn't improve predictions 
+    # for feature in header[:-3]:
+    #     mean = df[feature].mean()
+    #     std = df[feature].std()
+    #     df[feature] = (df[feature] - mean)/(std)
 
-    # Normalize min-max
-    for feature in header[:-3]:
-        minimum = df[feature].min()
-        maximum = df[feature].max()
-        df[feature] = (df[feature] - minimum)/(maximum-minimum)
+    # Normalize min-max. Doesn't improve predictions
+    # for feature in header[:-3]:
+    #    minimum = df[feature].min()
+    #    maximum = df[feature].max()
+    #    df[feature] = (df[feature] - minimum)/(maximum-minimum)
 
-
-    
-
-    df = df.drop(["duration", "f0s", "F1s", "F2s", "F3s", "F4s"],axis=1)
-    print(df.head)
+    # df = df.drop(["duration", "f0s", "F1s", "F2s", "F3s", "F4s"],axis=1)
+    # print(df.head)
     return df
 
 
@@ -113,29 +109,50 @@ def get_mean(data):
 
 
 def get_covariance_matrix(data, diagonal=False):
-    """[summary]
+    """Computes the covariance matrix for each class and puts them into
+        a dictionary.
     
     Arguments:
-        data {[type]} -- [description]
+        data {[pd.DataFrame]} -- [Dataframe with labeled index]
     
     Keyword Arguments:
-        diagonal {bool} -- [description] (default: {False})
+        diagonal {bool} -- [If True, will compute the diagonal covariance matrix] (default: {False})
     
     Returns:
-        [type] -- [description]
+        [dict] -- [Dictionary with pd.DataFrame with covariance]
     """
     cov_matrix_dict = {}
+    
     for vowel in vowels:
         vowel_df = data.loc[vowel]
         vowel_df = vowel_df.iloc[:, :-2]
         vowel_df = vowel_df.cov()
+        if diagonal:
+            # cov_header = vowel_df.columns
+            # cov_index = vowel_df.index
+            # vowel_df = pd.DataFrame(np.diag(np.diag(vowel_df.values)))
+            # vowel_df = vowel_df.set_index(cov_index)
+            # vowel_df.columns = cov_header
+            vowel_df = pd.DataFrame(np.diag(np.diag(vowel_df)), index=[vowel_df.index, vowel_df.columns])
+
         cov_matrix_dict[vowel] = vowel_df
     return cov_matrix_dict
 
 
 def train_single_GM(train_data, diagonal=False):
+    """Trains a Gaussian Mixture model for each class
+    
+    Arguments:
+        train_data {[pd.DataFrame]} -- [Labeled training data in a 2D array]
+    
+    Keyword Arguments:
+        diagonal {bool} -- [Choose between normal or diagonal covariance matrix] (default: {False})
+    
+    Returns:
+        [list] -- [list with normal distributions, in tha same order as the classes]
+    """
     rv_list = []
-    cov_dict = get_covariance_matrix(train_data)
+    cov_dict = get_covariance_matrix(train_data, diagonal)
     mean_matrix = get_mean(train_data)
     for vowel in vowels:
         cov_matrix = cov_dict[vowel].values.astype(float)
@@ -150,14 +167,17 @@ def train_single_GM(train_data, diagonal=False):
 
 
 def test_singel_GMM(rv_list, test_data):
-    """[summary]
+    """Test a list of GMMs on a set of labeled test data
+        and returns the predictions and the actual labels as two
+        seperate lists
     
     Arguments:
-        rv_list {[type]} -- [description]
-        test_data {[type]} -- [description]
+        rv_list {[list]} -- [List of GMMs]
+        test_data {[pd.DataFrame]} -- [Labeled test data]
     
     Returns:
-        [type] -- [description]
+        [np.array] -- [List of the predicted classes]
+        [np.array] -- [List of the actual classes]
     """
     data_length = test_data.shape[0]
     probabilities = np.zeros((len(vowels), data_length))
@@ -174,14 +194,15 @@ def test_singel_GMM(rv_list, test_data):
 
 
 def train_GMM(train_data, n_components):
-    """[summary]
+    """Train GMM on a training set with the GMM consisting of n components of
+        different independent GMMs
     
     Arguments:
-        train_data {[type]} -- [description]
-        n_components {[type]} -- [description]
+        train_data {[pd.DataFrame]} -- [Labeled training data]
+        n_components {[int]} -- [The number of GMMs each classifier should consist of]
     
     Returns:
-        [type] -- [description]
+        [list] -- [List of GMM objects that contain the trained set of GMMs]
     """
     gmm_list = []
     for vowel in vowels:
@@ -199,15 +220,19 @@ def train_GMM(train_data, n_components):
 
 
 def test_multiple_GMM(gmm_list, test_data, n_components):
-    """[summary]
+    """Test a list of GMMs on a set of labeled test data
+        and returns the predictions and the actual labels as two
+        seperate lists
     
     Arguments:
-        gmm_list {[type]} -- [description]
-        test_data {[type]} -- [description]
-        n_components {[type]} -- [description]
+        gmm_list {[list]} -- [List of GMMs]
+        test_data {[pd.DataFrame]} -- [Labeled test data]
+        n_components {[int]} -- [The number of components each GMM consists of]
+
     
     Returns:
-        [type] -- [description]
+        [np.array] -- [List of the predicted classes]
+        [np.array] -- [List of the actual classes]
     """
     # Initialize empty arrays
     probabilities = np.zeros((len(vowels), test_data.shape[0]))
@@ -228,14 +253,14 @@ def test_multiple_GMM(gmm_list, test_data, n_components):
 
 
 def get_confusion_matrix(predictions, labels):
-    """[summary]
+    """Computes and returns the confusion matrix
     
     Arguments:
-        predictions {[type]} -- [description]
-        labels {[type]} -- [description]
+        predictions {[np.array]} -- [Numpy array with the predicted classes]
+        labels {[np.array]} -- [Numpy array with the actual label of the class]
     
     Returns:
-        [type] -- [description]
+        [np.array] -- [Confusion matrix as a 2D np.array]
     """
     data_length = predictions.shape[0]
     conf_matrix = np.zeros((len(vowels), len(vowels)))
@@ -247,13 +272,13 @@ def get_confusion_matrix(predictions, labels):
 
 
 def get_error_rate(conf_matrix):
-    """[summary]
+    """Computes and retruns the error rate in percent based on the confusion matrix
     
     Arguments:
-        conf_matrix {[type]} -- [description]
+        conf_matrix {[np.Array]} -- [Confusion matrix]
     
     Returns:
-        [type] -- [description]
+        [float] -- [error rate]
     """
     error_rate = (1 - np.sum(conf_matrix.diagonal())/np.sum(conf_matrix))*100
     return error_rate
@@ -267,6 +292,7 @@ if __name__ == "__main__":
 
     # Part 1: using a single gaussian to predict classes
     rvs = train_single_GM(train)
+    print("Single gaussian test set...")
     preds, labels = test_singel_GMM(rvs, test)
     conf = get_confusion_matrix(preds, labels)
     error_rate = get_error_rate(conf)
@@ -274,9 +300,45 @@ if __name__ == "__main__":
     print(conf)
     print(f"Error rate: {error_rate}%")
 
+    print("Single gaussian training set...")
+    preds, labels = test_singel_GMM(rvs, train)
+    conf = get_confusion_matrix(preds, labels)
+    error_rate = get_error_rate(conf)
+    print("Confusion matrix:")
+    print(conf)
+    print(f"Error rate: {error_rate}%")
+
+    print("Single gaussian diagonal test set...")
+    rvs = train_single_GM(train,True)
+    preds, labels = test_singel_GMM(rvs, test)
+    conf = get_confusion_matrix(preds, labels)
+    error_rate = get_error_rate(conf)
+    print("Confusion matrix:")
+    print(conf)
+    print(f"Error rate: {error_rate}%")
+
+    print("Single gaussian diagonal training set...")
+    rvs = train_single_GM(train,True)
+    preds, labels = test_singel_GMM(rvs, train)
+    conf = get_confusion_matrix(preds, labels)
+    error_rate = get_error_rate(conf)
+    print("Confusion matrix:")
+    print(conf)
+    print(f"Error rate: {error_rate}%")
+
     # Part 2: Using a mixture of 3 gaussians per class to predict the class
+    print("Multiple gaussian test set...")
     gmm_list = train_GMM(train,3)
     preds, labels = test_multiple_GMM(gmm_list, test, 3)
+    conf = get_confusion_matrix(preds, labels)
+    error_rate = get_error_rate(conf)
+    print("Confusion matrix:")
+    print(conf)
+    print(f"Error rate: {error_rate}%")
+
+    print("Multiple gaussian training set...")
+    gmm_list = train_GMM(train,3)
+    preds, labels = test_multiple_GMM(gmm_list, train, 3)
     conf = get_confusion_matrix(preds, labels)
     error_rate = get_error_rate(conf)
     print("Confusion matrix:")
