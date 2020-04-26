@@ -32,7 +32,7 @@ def load_data():
     """Loads and reshapes the data putting it into a pandas dataframe
     
     Returns:
-        [pd.DataFrame]
+        pd.DataFrame
     """
     df = pd.read_csv("Wovels/vowdata_nohead.dat",
                      delim_whitespace=True, header=None)
@@ -70,12 +70,13 @@ def split_data(data, train_samples):
 
     
     Arguments:
-        data {[pd.DataFrame]} -- [description]
-        train_samples {[int]} -- [The number of training sampless]
+        data: pd.DataFrame -- The data to be splitted into train and
+                              test set.
+        train_samples: int -- The number of training sampless
     
     Returns:
-        [pd.DataFrame] -- [training dataframe]
-        [pd.DataFrame] -- [test dataframe]
+        pd.DataFrame -- training dataframe
+        pd.DataFrame -- test dataframe
     """
     train_df = pd.DataFrame()
     test_df = pd.DataFrame()
@@ -91,10 +92,10 @@ def get_mean(data):
         vowel in the dataframe. 
     
     Arguments:
-        data {[pd.DataFrame]} -- [Dataframe with labeled index]
+        data: pd.DataFrame -- Dataframe with labeled index
     
     Returns:
-        [pd.DataFrame] -- [Dataframe with mean value in columns for each vowel]
+        pd.DataFrame -- Dataframe with mean value in columns for each vowel
     """
     mean_df = pd.DataFrame()
 
@@ -113,13 +114,13 @@ def get_covariance_matrix(data, diagonal=False):
         a dictionary.
     
     Arguments:
-        data {[pd.DataFrame]} -- [Dataframe with labeled index]
+        data: pd.DataFrame -- Dataframe with labeled index
     
     Keyword Arguments:
-        diagonal {bool} -- [If True, will compute the diagonal covariance matrix] (default: {False})
+        diagonal: bool -- If True, will compute the diagonal covariance matrix (default: False)
     
     Returns:
-        [dict] -- [Dictionary with pd.DataFrame with covariance]
+        dict -- Dictionary with pd.DataFrame with covariance
     """
     cov_matrix_dict = {}
     
@@ -143,13 +144,13 @@ def train_single_GM(train_data, diagonal=False):
     """Trains a Gaussian Mixture model for each class
     
     Arguments:
-        train_data {[pd.DataFrame]} -- [Labeled training data in a 2D array]
+        train_data: pd.DataFrame -- Labeled training data in a 2D array
     
     Keyword Arguments:
-        diagonal {bool} -- [Choose between normal or diagonal covariance matrix] (default: {False})
+        diagonal: bool -- Choose between normal or diagonal covariance matrix (default: False)
     
     Returns:
-        [list] -- [list with normal distributions, in tha same order as the classes]
+        list -- List with normal distributions, in the same order as the classes
     """
     rv_list = []
     cov_dict = get_covariance_matrix(train_data, diagonal)
@@ -172,12 +173,12 @@ def test_singel_GMM(rv_list, test_data):
         seperate lists
     
     Arguments:
-        rv_list {[list]} -- [List of GMMs]
-        test_data {[pd.DataFrame]} -- [Labeled test data]
+        rv_list: list -- List of GMMs
+        test_data: pd.DataFrame -- Labeled test data
     
     Returns:
-        [np.array] -- [List of the predicted classes]
-        [np.array] -- [List of the actual classes]
+        np.array -- List of the predicted classes
+        np.array -- List of the actual classes
     """
     data_length = test_data.shape[0]
     probabilities = np.zeros((len(vowels), data_length))
@@ -198,11 +199,11 @@ def train_GMM(train_data, n_components):
         different independent GMMs
     
     Arguments:
-        train_data {[pd.DataFrame]} -- [Labeled training data]
-        n_components {[int]} -- [The number of GMMs each classifier should consist of]
+        train_data: pd.DataFrame -- Labeled training data
+        n_components: int -- The number of GMMs each classifier should consist of
     
     Returns:
-        [list] -- [List of GMM objects that contain the trained set of GMMs]
+        list -- List of GMM objects that contain the trained set of GMMs
     """
     gmm_list = []
     for vowel in vowels:
@@ -225,14 +226,14 @@ def test_multiple_GMM(gmm_list, test_data, n_components):
         seperate lists
     
     Arguments:
-        gmm_list {[list]} -- [List of GMMs]
-        test_data {[pd.DataFrame]} -- [Labeled test data]
-        n_components {[int]} -- [The number of components each GMM consists of]
+        gmm_list: list -- List of GMMs
+        test_data: pd.DataFrame -- Labeled test data
+        n_components: int -- The number of components each GMM consists of
 
     
     Returns:
-        [np.array] -- [List of the predicted classes]
-        [np.array] -- [List of the actual classes]
+        np.array -- List of the predicted classes
+        np.array -- List of the actual classes
     """
     # Initialize empty arrays
     probabilities = np.zeros((len(vowels), test_data.shape[0]))
@@ -256,11 +257,11 @@ def get_confusion_matrix(predictions, labels):
     """Computes and returns the confusion matrix
     
     Arguments:
-        predictions {[np.array]} -- [Numpy array with the predicted classes]
-        labels {[np.array]} -- [Numpy array with the actual label of the class]
+        predictions: np.array -- Numpy array with the predicted classes
+        labels: np.array -- Numpy array with the actual label of the class
     
     Returns:
-        [np.array] -- [Confusion matrix as a 2D np.array]
+        np.array -- Confusion matrix as a 2D np.array
     """
     data_length = predictions.shape[0]
     conf_matrix = np.zeros((len(vowels), len(vowels)))
@@ -275,10 +276,10 @@ def get_error_rate(conf_matrix):
     """Computes and retruns the error rate in percent based on the confusion matrix
     
     Arguments:
-        conf_matrix {[np.Array]} -- [Confusion matrix]
+        conf_matrix: np.array -- Confusion matrix
     
     Returns:
-        [float] -- [error rate]
+        float -- error rate
     """
     error_rate = (1 - np.sum(conf_matrix.diagonal())/np.sum(conf_matrix))*100
     return error_rate
