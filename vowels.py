@@ -34,7 +34,7 @@ def load_data():
     Returns:
         pd.DataFrame
     """
-    df = pd.read_csv("Wovels/vowdata_nohead.dat",
+    df = pd.read_csv("Vowels/vowdata_nohead.dat",
                      delim_whitespace=True, header=None)
     first_column = df[0].values
     person_list = pd.Series([entry[:1] for entry in first_column])
@@ -58,7 +58,7 @@ def load_data():
     #    maximum = df[feature].max()
     #    df[feature] = (df[feature] - minimum)/(maximum-minimum)
 
-    # df = df.drop(["duration", "f0s", "F1s", "F2s", "F3s", "F4s"],axis=1)
+    df = df.drop(["duration", "f0s", "F1_20", "F2_20", "F3_20", "F1_50", "F2_50", "F3_50","F1_80", "F2_80", "F3_80",],axis=1)
     # print(df.head)
     return df
 
