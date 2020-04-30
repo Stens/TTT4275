@@ -1,9 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
-import time
+import seaborn as sn
+import pandas as pd
 
 CLASSES = 3
+legends = ['Setosa', 'Versicolour', 'Virginica']
 
 def load_data():
     """Loads the iris dataset from file and 
@@ -55,7 +57,6 @@ def split_data(data, training_size):
     test_data = np.zeros((CLASSES*test_size,sample_length))
     for i in range(CLASSES):
         tmp = data[(i*N):((i+1)*N)]
-        np.random.shuffle(tmp)
         trainig_data[(i*training_size):((i+1)*training_size),:] = tmp[:training_size,:]
         test_data[(i*test_size):((i+1)*test_size),:] = tmp[training_size:,:]
 
@@ -101,20 +102,20 @@ def sigmoid(x):
     """
     return np.array(1 / (1 + np.exp(-x)))
 
-def train(data, iterations):
+def train(data, iterations, alpha, plot=False):
     """Trains a linear classifier on the provided dataset.
     
     Arguments:
-        data: np.array -- [description]
-        iterations: int -- [description]
+        data: np.array -- training data with features and labels
+        iterations: int -- The number of iterations for the training
+        alpha: int -- Step size for the training
     
     Returns:
-        [type] -- [description]
+        np.array -- The classifier W with shape CxD+1
     """
-    alpha = 0.01
-    # gk is the linear classifier, shape = ()
     # tk are targets aka actual class, shape = (3,1)
     # g = Wx
+    mse_liste = []
     features = data.shape[1]-2
     g_k = np.zeros((CLASSES))
     g_k[0] = 1
@@ -123,6 +124,7 @@ def train(data, iterations):
     W = np.zeros((CLASSES,features+1))
     for i in range(iterations):
         grad_W_MSE = 0
+        mse = 0
         # np.random.shuffle(data) # Shuffle the data before each iteration
         for x_k in data:
             # Find g_k
@@ -142,31 +144,44 @@ def train(data, iterations):
 
             grad_W_MSE += np.matmul(np.multiply(grad_gk_MSE, (1-g_k)), grad_W_zk) #[np.newaxis]
             
-            # Eq 3.23
+            mse += 0.5* np.matmul((g_k-t_k).T,(g_k-t_k))
+        mse_liste.append(mse[0])
+
+        # Eq 3.23
         W = W-alpha*grad_W_MSE 
+
+    if plot:
+        plt.plot(mse_liste)
+    
     return W
 
 
 def get_confuse_matrix(W, test_data):
-    """
+    """Computes the confusion matrix for the classifer
+        and the data
     
     Arguments:
-        W {[type]} -- [description]
-        test_data {[type]} -- [description]
+        W: np.array -- CxD+1 classifier
+        test_data: np.array -- the data to be classified
+                               with features and labels
     
     Returns:
-        [type] -- [description]
+        np.array -- Confusion matrix
     """
     confuse_matrix = np.zeros((CLASSES,CLASSES))
     for i in range(len(test_data)):
         prediction = int(np.argmax(np.matmul(w,test_data[i,:-1])))
         actual = int(test_data[i,-1])
         confuse_matrix[prediction,actual] += 1
+
+    print(confuse_matrix)
+    error_rate = (1 - np.sum(confuse_matrix.diagonal())/np.sum(confuse_matrix))*100
+    print(f"Error rate: {error_rate}%")
     return confuse_matrix
 
 
 
-def plot_histogram(data, step=0.1):
+def plot_histogram(data, step=0.03):
     """Plots the four features of the plant in one plot.
     
     Arguments:
@@ -207,16 +222,81 @@ def plot_histogram(data, step=0.1):
     plt.show()
 
 
+def plot_confusion_matrix(confusion_matrix, classes, name="Confusion matrix"):
+    df_cm = pd.DataFrame(confusion_matrix, index=classes, columns=classes)
+    fig = plt.figure(num=name, figsize = (5,5))
+    sn.heatmap(df_cm, annot=True)
+    plt.show()
+
 
 if __name__ == "__main__":
     data = load_data()
     # plot_petal(data)
     # plot_sepal(data)
     # plot_histogram(data)
+    # List of alphas used to tune parameters
+    # alphas = [0.5, 0.25, 0.1, 0.05, 0.005]
+    alphas = [0.05]
+    iterations = 5000
     train_set, test_set = split_data(data,30)
-    w = train(train_set[2:,:],1000)
+    for alpha in alphas:
+        print("30 train, 20 test")
+        w = train(train_set[:,:],iterations, alpha, True)
+        print("Training")
+        conf = get_confuse_matrix(w, train_set)
+        plot_confusion_matrix(conf, legends)
+        print("Testing")
+        conf = get_confuse_matrix(w, test_set)
+        plot_confusion_matrix(conf, legends)
 
-    conf = get_confuse_matrix(w,test_set)
-    print(conf)
-    error_rate = (1 - np.sum(conf.diagonal())/np.sum(conf))*100
-    print(f"Error rate: {error_rate}%")
+        print("----------")
+        print("20 train, 30 test")
+        w = train(test_set[:,:],iterations, alpha)
+        print("Training")
+        conf = get_confuse_matrix(w, test_set)
+        plot_confusion_matrix(conf, legends)
+        print("Testing")
+        conf = get_confuse_matrix(w, train_set)
+        plot_confusion_matrix(conf, legends)
+   
+
+        print("Removing features")
+        print("Removing sepal width")
+        train_set = np.delete(train_set,1,1) # Deleting column
+        test_set = np.delete(test_set,1,1) # Deleting column
+        w = train(train_set[:,:],iterations, alpha)
+        print("Training")
+        conf = get_confuse_matrix(w, train_set)
+        plot_confusion_matrix(conf, legends)
+        print("Test")
+        conf = get_confuse_matrix(w, test_set)
+        plot_confusion_matrix(conf, legends)
+
+        print("Removing sepal length")
+        test_set = np.delete(test_set,0,1) # Deleting column
+        train_set = np.delete(train_set,0,1) # Deleting column
+        w = train(train_set[:,:],iterations, alpha)
+        print("Training")
+        conf = get_confuse_matrix(w, train_set)
+        plot_confusion_matrix(conf, legends)
+        print("Test")
+        conf = get_confuse_matrix(w, test_set)
+        plot_confusion_matrix(conf, legends)
+
+        print("Removing petal length")
+        test_set = np.delete(test_set,0,1) # Deleting column
+        train_set = np.delete(train_set,0,1) # Deleting column
+        w = train(train_set[:,:],10000, 0.15) # Adjusted alpha and iterations
+        print("Training")
+        conf = get_confuse_matrix(w, train_set)
+        plot_confusion_matrix(conf, legends)
+        print("Test")
+        conf = get_confuse_matrix(w, test_set)
+        plot_confusion_matrix(conf, legends)
+
+    plt.ylabel("MSE")
+    plt.xlabel("Iteration number")
+    alpha_list = ["Alpha: " +str(alpha) for alpha in alphas]
+    plt.legend(alpha_list)
+
+    plt.show()
